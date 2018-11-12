@@ -1,0 +1,20 @@
+[package]
+authors = ["Jacob Brown <kardeiz@gmail.com>"]
+name = "dbi-macros"
+version = "0.1.0"
+description = "Database interface macros"
+keywords = ["dbi", "database"]
+license = "MIT"
+
+
+[dependencies]
+futures = "0.1.25"
+mysql_async = "0.15.1"
+quote = "0.6.10"
+
+[dependencies.syn]
+features = ["full", "extra-traits"]
+version = "0.15.18"
+
+[lib]
+proc-macro = true
