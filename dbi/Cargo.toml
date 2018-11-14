@@ -13,7 +13,7 @@ tokio = "0.1.11"
 
 [dependencies.dbi-macros]
 path = "../dbi-macros"
-version = "0.2.0"
+version = "0.2.1"
 
 [features]
 default = ["mysql"]
