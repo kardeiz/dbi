@@ -270,8 +270,10 @@ pub fn from_row_macro_derive(item: TokenStream) -> TokenStream {
     let item_ident1 = item.ident.clone();
     let item_ident2 = item_ident1.clone();
 
-    let out = quote! { 
-        impl my::prelude::FromRow for #item_ident1 {
+    let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
+
+    let impl_inner = quote! { 
+        impl #impl_generics _dbi::exp::my::FromRow for #item_ident1 #ty_generics #where_clause {
             fn from_row(row: my::Row) -> Self {                
                 Self::from_row_opt(row).unwrap()
             }
@@ -282,6 +284,21 @@ pub fn from_row_macro_derive(item: TokenStream) -> TokenStream {
                 })
             }
         }
+    };
+
+    let dummy_const = Ident::new(
+        &format!("_IMPL_FromRow_FOR_{}", item.ident.to_string()),
+        Span::call_site()
+    );
+
+    let out = quote!{
+        #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+        const #dummy_const: () = {
+            #[allow(unknown_lints)]
+            #[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
+            extern crate dbi as _dbi;
+            #impl_inner
+        };
     };
 
     out.into()
