@@ -1,7 +1,7 @@
 [package]
 authors = ["Jacob Brown <kardeiz@gmail.com>"]
 name = "dbi"
-version = "0.2.1"
+version = "0.2.2"
 description = "Database interface tools"
 keywords = ["dbi", "database"]
 license = "MIT"
@@ -13,7 +13,7 @@ tokio = "0.1.11"
 
 [dependencies.dbi-macros]
 path = "../dbi-macros"
-version = "0.2.1"
+version = "0.2.2"
 
 [features]
 default = ["mysql"]

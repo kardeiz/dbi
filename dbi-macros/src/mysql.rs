@@ -71,7 +71,7 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
                 .filter_map(|x| match x { Meta::NameValue(y) => Some(y), _ => None })
                 .find(|x| x.ident == "mapper" )
                 .and_then(|x| match x.lit { Lit::Str(ref y) => Some(y), _ => None })
-                .map(|x| x.parse::<Expr>().unwrap() ) {                
+                .map(|x| x.parse::<Expr>().unwrap() ) {     
                 mapper = quote!(#expr);        
             }
 

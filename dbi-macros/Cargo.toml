@@ -4,11 +4,9 @@ description = "Database interface macros"
 keywords = ["dbi", "database"]
 license = "MIT"
 name = "dbi-macros"
-version = "0.2.1"
+version = "0.2.2"
 
 [dependencies]
-futures = "0.1.25"
-mysql_async = "0.15.1"
 proc-macro2 = "0.4.23"
 quote = "0.6.10"
 
