@@ -5,6 +5,7 @@ version = "0.2.2"
 description = "Database interface tools"
 keywords = ["dbi", "database"]
 license = "MIT"
+readme = "../README.md"
 
 [dependencies]
 futures = "0.1.25"
