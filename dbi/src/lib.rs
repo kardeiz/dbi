@@ -2,15 +2,30 @@ extern crate futures;
 
 extern crate dbi_macros;
 
-use futures::Future;
 
-pub use dbi_macros::*;
 
 #[cfg(feature="mysql")]
+extern crate mysql_async as my;
+
 pub mod mysql;
+
 #[cfg(feature="mysql")]
 pub use mysql::*;
 
+pub mod exp {
+
+    #[cfg(feature="mysql")]
+    pub mod my {
+        pub use ::my::*;
+    }    
+
+    pub mod futures {
+        pub use futures::*;
+    }
+}
+
+use futures::Future;
+pub use dbi_macros::*;
 
 #[derive(Debug, Clone)]
 pub enum ResultSet<T> {
@@ -31,12 +46,6 @@ impl<T> ResultSet<T> {
         }
     }
 }
-
-// impl Into<()> for ResultSet<()> {
-//     fn into(self) -> () {
-//         ()
-//     }
-// }
 
 impl<T> Into<Option<T>> for ResultSet<T> {
     fn into(self) -> Option<T> {

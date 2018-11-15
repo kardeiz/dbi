@@ -1,8 +1,14 @@
 # dbi
 
-A database interface for Rust, based loosely on [Jdbi](https://github.com/jdbi/jdbi/).
+A database interface for Rust, based loosely on the SQL Objects API of Java's [Jdbi](https://github.com/jdbi/jdbi/).
 
-Define a trait with methods conforming to your params and desired results, and pass in the SQL string in the method attributes:
+Uses Rust 1.30's procedural macros. Works on stable (current) Rust.
+
+Currently only supports mysql (via [`mysql_async`](https://github.com/blackbeam/mysql_async)), but support for other database systems is planned.
+
+## Usage
+
+Define a trait with methods conforming to params and desired results for any number of queries, and pass in the SQL string in the method attributes:
 
 ```rust
 #[dbi_trait(impl_for(new="UserDao"))]
@@ -29,7 +35,7 @@ This will create a "connection-like" newtype wrapper that you can use like:
 let fut = UserDao(conn).find_by_id(2);
 ```
 
-Trait methods must return a value that looks like `Box<Future<Item=R> ...>`, where `R` is a type that can be extracted from a database row.
+Trait methods must return a value that looks like `Box<Future<Item=R> ...>`, where `R` is an `Option<T>` or `Vec<T>` and T is a type that can be extracted from a database row.
 
 Currently supports the following options:
 

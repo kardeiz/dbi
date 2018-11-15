@@ -29,8 +29,8 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
 
     let impl_conn = quote! {
         impl<F, I> _dbi::Connection for #impl_ident<F> 
-            where F: _dbi::exp::futures::Future<Item=I, Error=_dbi::exp::my::Error> + Send + 'static, 
-                I: _dbi::exp::my::Queryable {
+            where F: _dbi::exp::futures::Future<Item=I, Error=_dbi::exp::my::errors::Error> + Send + 'static, 
+                I: _dbi::exp::my::prelude::Queryable {
             type Queryable = I;
             type Inner = F;
             fn connection(self) -> Self::Inner {
@@ -64,7 +64,7 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
                 .next()
                 .unwrap();
 
-            let mut mapper = quote!(_dbi::exp::my::FromRow::from_row_opt);
+            let mut mapper = quote!(_dbi::exp::my::prelude::FromRow::from_row_opt);
 
             if let Some(expr) = sql_query_attr.nested.iter()
                 .filter_map(|x| match x { NestedMeta::Meta(y) => Some(y), _ => None })
@@ -258,7 +258,7 @@ pub fn from_row_macro_derive(item: TokenStream) -> TokenStream {
                 fields.push(quote! {
                     let #ident1: #ty = match row.get_opt(#ident2) {
                         Some(Ok(val)) => val,
-                        _ => { return Err(my::FromRowError(row)); }
+                        _ => { return Err(_dbi::exp::my::FromRowError(row)); }
                     };
                 });
 
@@ -273,11 +273,11 @@ pub fn from_row_macro_derive(item: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
 
     let impl_inner = quote! { 
-        impl #impl_generics _dbi::exp::my::FromRow for #item_ident1 #ty_generics #where_clause {
-            fn from_row(row: my::Row) -> Self {                
+        impl #impl_generics _dbi::exp::my::prelude::FromRow for #item_ident1 #ty_generics #where_clause {
+            fn from_row(row: _dbi::exp::my::Row) -> Self {                
                 Self::from_row_opt(row).unwrap()
             }
-            fn from_row_opt(row: my::Row) -> Result<Self, my::FromRowError> {
+            fn from_row_opt(row: _dbi::exp::my::Row) -> Result<Self, _dbi::exp::my::FromRowError> {
                 #(#fields)*
                 Ok(#item_ident2 {
                     #(#field_names),*

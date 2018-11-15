@@ -4,7 +4,7 @@ description = "Database interface macros"
 keywords = ["dbi", "database"]
 license = "MIT"
 name = "dbi-macros"
-version = "0.2.2"
+version = "0.2.3"
 
 [dependencies]
 proc-macro2 = "0.4.23"

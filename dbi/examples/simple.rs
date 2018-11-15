@@ -17,17 +17,17 @@ pub struct User {
 #[dbi_trait(impl_for(new="UserDao"))]
 pub trait UserDaoImpl {
 
-    // #[sql_query("SELECT * FROM users WHERE id = :id", use_named_params=true)]
-    // fn find_by_id(self, id: i32) -> Box<Future<Item=Option<User>, Error=my::errors::Error> + Send>;
+    #[sql_query("SELECT * FROM users WHERE id = :id", use_named_params=true)]
+    fn find_by_id(self, id: i32) -> Box<Future<Item=Option<User>, Error=my::errors::Error> + Send>;
 
     #[sql_query("SELECT * FROM users WHERE id = ?", mapper="|row| { let (id, full_name) = my::from_row_opt(row)?; Ok(User {id, full_name}) }")]
     fn find_by_id_faster(self, id: i32) -> Box<Future<Item=Option<User>, Error=my::errors::Error> + Send>;
 
-    // #[sql_query("SELECT name FROM users")]
-    // fn find_all_names(self) -> Box<futures::Future<Item=Vec<String>, Error=my::errors::Error> + Send>;
+    #[sql_query("SELECT name FROM users")]
+    fn find_all_names(self) -> Box<futures::Future<Item=Vec<String>, Error=my::errors::Error> + Send>;
 
-    // #[sql_update("INSERT INTO users (name) VALUES (:name)", use_named_params=true)]
-    // fn create_user_named(self, name: String) -> Box<futures::Future<Item=Option<u64>, Error=my::errors::Error> + Send>;
+    #[sql_update("INSERT INTO users (name) VALUES (:name)", use_named_params=true)]
+    fn create_user_named(self, name: String) -> Box<futures::Future<Item=Option<u64>, Error=my::errors::Error> + Send>;
 
 }
 
