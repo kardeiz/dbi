@@ -20,7 +20,7 @@ pub trait UserDaoImpl {
     #[sql_query("SELECT * FROM users WHERE id = :id", use_named_params=true)]
     fn find_by_id(self, id: i32) -> Box<Future<Item=Option<User>, Error=my::errors::Error> + Send>;
 
-    #[sql_query("SELECT * FROM users WHERE id = ?", mapper="|row| { let (id, full_name): my::from_row_opt(row)?; Ok(User {id, full_name}) }")]
+    #[sql_query("SELECT * FROM users WHERE id = ?", mapper="|row| { let (id, full_name) = my::from_row_opt(row)?; Ok(User {id, full_name}) }")]
     fn find_by_id_faster(self, id: i32) -> Box<Future<Item=Option<User>, Error=my::errors::Error> + Send>;
 
     #[sql_query("SELECT name FROM users")]
