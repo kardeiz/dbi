@@ -1,12 +1,10 @@
 extern crate futures;
-
 extern crate dbi_macros;
-
-
 
 #[cfg(feature="mysql")]
 extern crate mysql_async as my;
 
+#[cfg(feature="mysql")]
 pub mod mysql;
 
 #[cfg(feature="mysql")]
