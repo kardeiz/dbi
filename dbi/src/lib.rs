@@ -45,6 +45,12 @@ impl<T> ResultSet<T> {
     }
 }
 
+impl<T> Into<()> for ResultSet<T> {
+    fn into(self) -> () {
+        ()
+    }
+}
+
 impl<T> Into<Option<T>> for ResultSet<T> {
     fn into(self) -> Option<T> {
         match self {

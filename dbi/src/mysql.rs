@@ -38,7 +38,7 @@ pub mod utils {
         rt
     }
 
-    pub fn update<CF, Q>(conn_fut: CF, sql: &'static str, params: ::my::Params) 
+    pub fn update<CF, Q>(conn_fut: CF, sql: &'static str, params: ::my::Params, get_last_insert_id: bool) 
         -> impl futures::Future<Item=crate::ResultSet<u64>, Error=::my::errors::Error> + Send + 'static
         where 
             CF: futures::Future<Item=Q, Error=::my::errors::Error> + Send + 'static,
@@ -48,12 +48,36 @@ pub mod utils {
         use ::my::prelude::*;
        
         let rt = conn_fut.and_then(move |conn| {
-            conn.drop_exec(sql, params)
-        }).and_then(|conn| {
-            let id = conn.get_last_insert_id()
+            conn.prep_exec(sql, params)
+        }).and_then(move |res| {
+            let id = if get_last_insert_id {
+                res.last_insert_id()
+            } else {
+                Some(res.affected_rows())
+            };
+
+            let id = id
                 .map(|x| crate::ResultSet::One(x) )
                 .unwrap_or_else(|| crate::ResultSet::None );
-            futures::future::ok::<_, ::my::errors::Error>(id)
+            res.drop_result().map(|_| id )
+        });
+
+        rt
+    }
+
+    pub fn batch<CF, Q>(conn_fut: CF, sql: &'static str, params: Vec<::my::Params>) 
+        -> impl futures::Future<Item=crate::ResultSet<()>, Error=::my::errors::Error> + Send + 'static
+        where 
+            CF: futures::Future<Item=Q, Error=::my::errors::Error> + Send + 'static,
+            Q: ::my::prelude::Queryable {
+
+        use futures::{Future, Stream};
+        use ::my::prelude::*;
+       
+        let rt = conn_fut.and_then(move |conn| {
+            conn.batch_exec(sql, params)
+        }).map(|res| {
+            crate::ResultSet::None
         });
 
         rt

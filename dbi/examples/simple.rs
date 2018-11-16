@@ -14,20 +14,25 @@ pub struct User {
     full_name: String
 }
 
+// pub type BoxedFuture<T> = Box<Future<Item=T, Error=my::errors::Error> + Send>;
+
 #[dbi_trait(impl_for(new="UserDao"))]
 pub trait UserDaoImpl {
 
-    #[sql_query("SELECT * FROM users WHERE id = :id", use_named_params=true)]
-    fn find_by_id(self, id: i32) -> Box<Future<Item=Option<User>, Error=my::errors::Error> + Send>;
+    #[sql_query("SELECT * FROM users WHERE id = ?", use_named_params=true)]
+    fn find_by_id(self, id: i32) -> BoxedFuture<Option<User>>;
 
     #[sql_query("SELECT * FROM users WHERE id = ?", mapper="|row| { let (id, full_name) = my::from_row_opt(row)?; Ok(User {id, full_name}) }")]
-    fn find_by_id_faster(self, id: i32) -> Box<Future<Item=Option<User>, Error=my::errors::Error> + Send>;
+    fn find_by_id_faster(self, id: i32) -> BoxedFuture<Vec<User>>;
 
     #[sql_query("SELECT name FROM users")]
-    fn find_all_names(self) -> Box<futures::Future<Item=Vec<String>, Error=my::errors::Error> + Send>;
+    fn find_all_names(self) -> BoxedFuture<Vec<User>>;
 
-    #[sql_update("INSERT INTO users (name) VALUES (:name)", use_named_params=true)]
-    fn create_user_named(self, name: String) -> Box<futures::Future<Item=Option<u64>, Error=my::errors::Error> + Send>;
+    #[sql_update("INSERT INTO users (name) VALUES (?)", get_last_insert_id=true)]
+    fn create_user_named(self, name: String) -> BoxedFuture<Option<u64>>;
+
+    #[sql_batch("INSERT INTO users (name, valid, email) VALUES (:name, :valid, :email)", get_last_insert_id=true, use_named_params=true)]
+    fn create_users(self, name: Vec<String>, valid: Vec<bool>, email: Vec<String>) -> BoxedFuture<()>;
 
 }
 
@@ -39,8 +44,10 @@ fn main() {
 
     let pool = my::Pool::new(format!("mysql://{}:{}@localhost:3306/{}", username, password, db));
     
-    let future = UserDao(pool.get_conn()).find_by_id_faster(2).and_then(|val| {
-    // let future = UserDao(pool.get_conn()).create_user_named("John".into()).and_then(|val| {
+    // let future = UserDao(pool.get_conn()).find_by_id(1).and_then(|val| {
+    let future = UserDao(pool.get_conn())
+        .create_users(vec!["Jacob".into(), "Bess".into()], vec![false, true], vec!["kardeiz@gmail.com".into(), "bess@gmail.com".into()])
+        .and_then(|val| {
         println!("{:?}", &val);
         pool.disconnect().map(|_| ())
     });

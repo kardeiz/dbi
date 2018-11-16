@@ -5,8 +5,8 @@ use syn::*;
 use quote::quote;
 
 pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
-    let attrs = parse_macro_input!(attrs as AttributeArgs);
 
+    let attrs = parse_macro_input!(attrs as AttributeArgs);
     let mut item = parse_macro_input!(item as ItemTrait);
 
     let item_ident = &item.ident;
@@ -46,6 +46,8 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let mut impl_methods = Vec::new();
 
     for trait_item_method in trait_item_methods {
+        
+        // panic!("{:#?}", trait_item_method.attrs);
         
         let main_list_attr = match trait_item_method.attrs.iter()
             .flat_map(|x| x.parse_meta() )
@@ -99,9 +101,13 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
                         let s = x.to_string();
                         quote!((#s, _dbi::exp::my::Value::from(#x)))
                     }).collect::<Vec<_>>();
-                    quote!( vec![#(#tups),*].into() )
+                    quote!(_dbi::exp::my::Params::from(vec![#(#tups),*]))
                 } else {
-                    quote!((#(#params,)*).into())
+                    let params = params.iter().map(|x| 
+                        quote!(&#x as &_dbi::exp::my::prelude::ToValue)
+                    ).collect::<Vec<_>>();
+
+                    quote!(_dbi::exp::my::Params::from([#(#params),*].as_ref()))
                 }            
             };
 
@@ -143,6 +149,14 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
                 .map(|x| x.value )
                 .unwrap_or(false);
 
+            let get_last_insert_id = sql_update_attr.nested.iter()
+                .filter_map(|x| match x { NestedMeta::Meta(y) => Some(y), _ => None })
+                .filter_map(|x| match x { Meta::NameValue(y) => Some(y), _ => None })
+                .find(|x| x.ident == "get_last_insert_id" )
+                .and_then(|x| match x.lit { Lit::Bool(ref y) => Some(y), _ => None })
+                .map(|x| x.value )
+                .unwrap_or(false);
+
             let MethodSig { constness, unsafety, asyncness, abi, ident, decl } = trait_item_method.sig.clone();
 
             let params = decl.inputs.iter()
@@ -159,15 +173,21 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
                         let s = x.to_string();
                         quote!((#s, _dbi::exp::my::Value::from(#x)))
                     }).collect::<Vec<_>>();
-                    quote!( vec![#(#tups),*].into() )
+                    quote!(_dbi::exp::my::Params::from(vec![#(#tups),*]))
                 } else {
-                    quote!((#(#params,)*).into())
+                    let params = params.iter().map(|x| 
+                        quote!(&#x as &_dbi::exp::my::prelude::ToValue)
+                    ).collect::<Vec<_>>();
+
+                    quote!(_dbi::exp::my::Params::from([#(#params),*].as_ref()))
                 }            
             };
 
+            // panic!("{}", params);
+
             let new_fn: ItemFn = parse_quote!{
                 fn __() {
-                    let rt = _dbi::utils::update(self.connection(), #sql, #params)
+                    let rt = _dbi::utils::update(self.connection(), #sql, #params, #get_last_insert_id)
                         .map(|x| x.into() );
                     Box::new(rt)
                 }
@@ -185,8 +205,120 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             impl_methods.push(quote!(#new_fn));
-
         }
+
+        if main_list_attr.ident == "sql_batch" {
+            let sql_batch_attr = &main_list_attr;
+
+            let sql = sql_batch_attr.nested.iter()
+                .filter_map(|x| match x { NestedMeta::Literal(y) => Some(y), _ => None })
+                .next()
+                .unwrap();
+
+            let use_named_params = sql_batch_attr.nested.iter()
+                .filter_map(|x| match x { NestedMeta::Meta(y) => Some(y), _ => None })
+                .filter_map(|x| match x { Meta::NameValue(y) => Some(y), _ => None })
+                .find(|x| x.ident == "use_named_params" )
+                .and_then(|x| match x.lit { Lit::Bool(ref y) => Some(y), _ => None })
+                .map(|x| x.value )
+                .unwrap_or(false);
+
+            let get_last_insert_id = sql_batch_attr.nested.iter()
+                .filter_map(|x| match x { NestedMeta::Meta(y) => Some(y), _ => None })
+                .filter_map(|x| match x { Meta::NameValue(y) => Some(y), _ => None })
+                .find(|x| x.ident == "get_last_insert_id" )
+                .and_then(|x| match x.lit { Lit::Bool(ref y) => Some(y), _ => None })
+                .map(|x| x.value )
+                .unwrap_or(false);
+
+            let MethodSig { constness, unsafety, asyncness, abi, ident, decl } = trait_item_method.sig.clone();
+
+            let params = decl.inputs.iter()
+                .filter_map(|x| match *x { FnArg::Captured(ref y) => Some(y), _ => None })
+                .filter_map(|x| match x.pat { Pat::Ident(ref y) => Some(y), _ => None })
+                .map(|x| &x.ident )
+                .collect::<Vec<_>>();
+
+            let params = if params.is_empty() {
+                quote!(().into())
+            } else {
+                if use_named_params {                    
+                    let pat = {
+                        let mut params_iter = params.iter();
+                        let first = params_iter.next();
+                        params_iter.fold(quote!(#first), |acc, p| {
+                            quote!((#acc, #p))
+                        })
+                    };
+
+                    let iter = {
+                        let mut params_iter = params.iter();
+                        let first = params_iter.next();
+                        params_iter.fold(quote!(#first.into_iter()), |acc, p| {
+                            quote!(#acc.zip(#p.into_iter()))
+                        })
+                    };
+
+                    let tups = params.iter().map(|x| {
+                        let s = x.to_string();
+                        quote!((#s, _dbi::exp::my::Value::from(#x)))
+                    }).collect::<Vec<_>>();
+
+                    quote! {
+                        #iter.map(|#pat| _dbi::exp::my::Params::from(vec![#(#tups),*]) )
+                            .collect::<Vec<_>>()
+                    }
+                } else {
+                    let pat = {
+                        let mut params_iter = params.iter();
+                        let first = params_iter.next();
+                        params_iter.fold(quote!(#first), |acc, p| {
+                            quote!((#acc, #p))
+                        })
+                    };
+
+                    let iter = {
+                        let mut params_iter = params.iter();
+                        let first = params_iter.next();
+                        params_iter.fold(quote!(#first.into_iter()), |acc, p| {
+                            quote!(#acc.zip(#p.into_iter()))
+                        })
+                    };
+
+                    let params = params.iter().map(|x| 
+                        quote!(&#x as &_dbi::exp::my::prelude::ToValue)
+                    ).collect::<Vec<_>>();
+
+                    quote! {
+                        #iter.map(|#pat| _dbi::exp::my::Params::from([#(#params),*].as_ref()) )
+                            .collect::<Vec<_>>()
+                    }
+                }            
+            };
+
+            let new_fn: ItemFn = parse_quote!{
+                fn __() {
+                    let rt = _dbi::utils::batch(self.connection(), #sql, #params)
+                        .map(|x| x.into() );
+                    Box::new(rt)
+                }
+            };
+
+            let new_fn = ItemFn { 
+                constness, 
+                unsafety, 
+                asyncness, 
+                abi, 
+                ident, 
+                decl: Box::new(decl.clone()), 
+                attrs: vec![],
+                ..new_fn 
+            };
+
+            impl_methods.push(quote!(#new_fn));
+        }
+
+
     }
 
     for meth in item.items.iter_mut()
