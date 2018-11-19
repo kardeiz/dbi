@@ -31,7 +31,7 @@ pub trait UserDaoImpl {
     #[sql_update("INSERT INTO users (name) VALUES (?)", get_last_insert_id=true)]
     fn create_user_named(self, name: String) -> BoxedFuture<Option<u64>>;
 
-    #[sql_batch("INSERT INTO users (name, valid, email) VALUES (:name, :valid, :email)", get_last_insert_id=true, use_named_params=true)]
+    #[sql_batch("INSERT INTO users (name, valid, email) VALUES (:name, :valid, :email)", use_named_params=true)]
     fn create_users(self, name: Vec<String>, valid: Vec<bool>, email: Vec<String>) -> BoxedFuture<()>;
 
 }

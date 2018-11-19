@@ -43,3 +43,9 @@ Currently supports the following options:
 * `mapper`: use some other expression to map to a result type. Can be a closure or other method.
 
 More features are planned, although this library will not provide all the options that Jdbi does.
+
+## Changelog
+
+* **0.3.0** 
+
+    * Add `sql_batch`. Currently does not return any value (only works with a method that returns `Future<Item=()>,...>`). Similar to Jdbi, each param is passed in as its own container (e.g., each named param would have a method arg that looks like `name: Vec<String>`).

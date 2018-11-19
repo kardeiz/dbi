@@ -48,7 +48,7 @@ pub fn dbi_trait(attrs: TokenStream, item: TokenStream) -> TokenStream {
     for trait_item_method in trait_item_methods {
         
         // panic!("{:#?}", trait_item_method.attrs);
-        
+
         let main_list_attr = match trait_item_method.attrs.iter()
             .flat_map(|x| x.parse_meta() )
             .filter_map(|x| match x { Meta::List(y) => Some(y), _ => None })
